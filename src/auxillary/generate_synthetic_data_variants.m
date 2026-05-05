@@ -3,6 +3,9 @@
 clear; clc; close all;
 rng(42);
 
+addpath('/MATLAB Drive/sonnhammergrni-genespider-0ac785abf89d');
+run('/MATLAB Drive/cvx/cvx_startup.m');
+
 % --- Configuration ---
 N = 1000;            % Number of genes
 S = 3;               % Sparsity (Average degree)
@@ -47,7 +50,7 @@ fprintf('\nGenerating Structure x Noise Variants...\n');
 
 % Calculate Gene Degrees (In-degree + Out-degree)
 gene_degrees = sum(abs(A_GT), 1) + sum(abs(A_GT), 2)';
-[~, ranked_gene_indices] = sort(gene_degrees, 'descend'); % Highest degrees first
+[~, ranked_gene_indices] = sort(gene_degrees, 'ascend'); % Lowest degrees first
 total_genes = length(ranked_gene_indices);
 
 for i = 1:n_struct_levels
