@@ -7,7 +7,7 @@ addpath('/MATLAB Drive/sonnhammergrni-genespider-0ac785abf89d');
 run('/MATLAB Drive/cvx/cvx_startup.m');
 
 % --- Configuration ---
-N = 1000;            % Number of genes
+N = 100;            % Number of genes
 S = 3;               % Sparsity (Average degree)
 cells_per_pert = 50; % Cells per perturbation
 n_struct_levels = 5;
