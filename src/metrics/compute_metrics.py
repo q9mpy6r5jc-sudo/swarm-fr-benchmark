@@ -486,7 +486,8 @@ def compute_performance(y_pred_path, y_ctrl_pred_path, y_gt_path, y_ctrl_gt_path
             X_ctrl_gt = X_ctrl_gt_raw.tocsr().T.tocsr()
             P_gt = P_gt_sparse.tocsr().T.tocsr()
         elif dim0_match and dim1_match:
-            if P_gt_sparse.shape[0] == X_pred_raw.shape[0]:
+            # C_pert == C_ctrl (Synthetic Data Edge Case)
+            if X_pred_raw.shape[0] > X_pred_raw.shape[1]: # Assumes that the total number of cells in the synthetic dataset is higher than the number of genes
                 X_pred, X_ctrl_pred, X_gt, X_ctrl_gt, P_gt = X_pred_raw, X_ctrl_pred_raw, X_gt_raw, X_ctrl_gt_raw, P_gt_sparse
             else:
                 X_pred = X_pred_raw.tocsr().T.tocsr()
@@ -584,8 +585,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Calculate evaluation metrics for a dataset variant.")
     parser.add_argument("--dataset", type=str, required=True, help="Folder name of the dataset")
     parser.add_argument("--variant", type=str, required=True, help="Folder name of the variant (e.g., 'GT_Reference' or 'Structure_Level_3_SNR_0.01')")
-    parser.add_argument("--base_path", type=str, default=("../../datasets/real"), help="Root directory containing dataset folders")
-    parser.add_argument("--results_path", type=str, default=("../../results/real"), help="Root directory to save results")
+    parser.add_argument("--base_path", type=str, default=os.path.expandvars("$SCRATCH/virtual-cell/virtual-cell-metrics/datasets/real"), help="Root directory containing dataset folders")
+    parser.add_argument("--results_path", type=str, default=os.path.expandvars("$SCRATCH/virtual-cell/virtual-cell-metrics/results/real"), help="Root directory to save results")
     parser.add_argument("--chunk_idx", type=int, default=0, help="The index of the chunk to process")
     parser.add_argument("--num_chunks", type=int, default=1, help="Total number of chunks to split the job into")
     args = parser.parse_args()
