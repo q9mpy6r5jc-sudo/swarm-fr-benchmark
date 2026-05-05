@@ -38,6 +38,20 @@ def deg_analysis(p_path, y_control_path, y_path, save_dir):
         X_ctrl_sparse = X_ctrl_raw.transpose().tocsr()
         P_cells_x_genes = P_sparse.transpose().tocsr()
         n_genes = X_pert_raw.shape[0]
+    elif dim0_match and dim1_match:
+        # C_pert == C_ctrl (Synthetic Data Edge Case)
+        if X_pert_raw.shape[0] > X_pert_raw.shape[1]:
+            print("   > Detected Orientation: Cells x Genes (Matching Dimensions)")
+            X_pert_sparse = X_pert_raw
+            X_ctrl_sparse = X_ctrl_raw
+            P_cells_x_genes = P_sparse 
+            n_genes = X_pert_raw.shape[1]
+        else:
+            print("   > Detected Orientation: Genes x Cells (Matching Dimensions)")
+            X_pert_sparse = X_pert_raw.transpose().tocsr() 
+            X_ctrl_sparse = X_ctrl_raw.transpose().tocsr()
+            P_cells_x_genes = P_sparse.transpose().tocsr()
+            n_genes = X_pert_raw.shape[0]
     else:
         raise ValueError("> Orientation completely mismatched. Cannot resolve.")
 
@@ -169,7 +183,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--base_path", 
         type=str, 
-        default=("../../datasets/real"),
+        default=os.path.expandvars("$SCRATCH/virtual-cell/virtual-cell-metrics/datasets/real"),
         help="The root directory containing the dataset folders."
     )
     
