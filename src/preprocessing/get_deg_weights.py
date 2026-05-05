@@ -183,7 +183,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--base_path", 
         type=str, 
-        default=os.path.expandvars("$SCRATCH/virtual-cell/virtual-cell-metrics/datasets/real"),
+        default=("../../datasets/real"),
         help="The root directory containing the dataset folders."
     )
     
