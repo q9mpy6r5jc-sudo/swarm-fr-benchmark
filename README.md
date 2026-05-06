@@ -4,9 +4,8 @@ This repository contains the codebase and scripts to reproduce the experiments, 
 
 ## Repository Structure
 
-- `datasets/`: Contains the real and synthetic datasets used for evaluations.
-- `results/`: Evaluation results and extracted metrics.
-- `analysis/`: Generated analysis tables, continuous metric distributions, and robustness/fidelity calculations.
+- `datasets/`: Contains the real and synthetic datasets used for evaluations (access via the Harvard Dataverse URL).
+- `results/`: Evaluation results and extracted metrics  (access via the Harvard Dataverse URL).
 - `src/`: Python source code, including:
   - `metrics/`: Core metrics computations (fidelity, robustness).
   - `preprocessing/`: Code to generate dataset variants (downsampling, merging chunks).
