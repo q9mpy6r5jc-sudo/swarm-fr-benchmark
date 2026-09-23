@@ -32,7 +32,7 @@ class SuppressOutput:
     def __exit__(self, exc_type, exc_value, traceback):
         sys.stdout = self._stdout
         sys.stderr = self._stderr
-        # Kinda bandaid fix sorry: Close the file descriptors to prevent OS limits from crashing the job
+        # Close file descriptors to prevent OS-level FD exhaustion
         self._null_stdout.close()
         self._null_stderr.close()
 
@@ -122,10 +122,8 @@ def calculate_retrieval_metrics(target_pred_vec, target_pert_name, gt_universe_d
     cosines, pearsons = [], []
     target_l1, target_l2, target_cos, target_pearson = None, None, None, None
     
-    print(f"BEFORE Target shape inside calculate_retrieval_metrics: {np.shape(target_pred_vec)} | Weights shape inside calculate_retrieval_metrics: {np.shape(weights)}")
     target_pred_vec = np.asarray(target_pred_vec).flatten()
     weights = np.asarray(weights).flatten()
-    print(f"AFTER Target shape inside calculate_retrieval_metrics: {np.shape(target_pred_vec)} | Weights shape inside calculate_retrieval_metrics: {np.shape(weights)}")
 
     w_sum = np.sum(weights)
     if w_sum == 0: return {}
@@ -166,7 +164,7 @@ def calculate_retrieval_metrics(target_pred_vec, target_pert_name, gt_universe_d
     cosines, pearsons = np.array(cosines), np.array(pearsons)
     n_total = len(dists_l1)
 
-    # Rank calculations (Note the flipped operators for similarities)
+    # Rank calculations (flipped operators for similarities)
     rank_l1 = np.sum(dists_l1 < target_l1)
     rank_l2 = np.sum(dists_l2 < target_l2)
     rank_cos = np.sum(cosines > target_cos)
@@ -384,10 +382,9 @@ def evaluate_single_perturbation(pert_gene, pert_to_indices, deg_cont, deg_bin, 
                     elif attack_name == 'Mode_Collapse_Median_Control': target_vec = median_ctrl_pred
                     elif attack_name == 'Mode_Collapse_Median_Perturbed': target_vec = median_pert_pred
                     elif attack_name == 'Normalization_Mismatch': target_vec = np.mean(np.log1p(block_p_raw), axis=0)
-                    elif attack_name == 'Scaling_Exploit': target_vec = np.round(np.tile(mu_ctrl_pred + (grp_mean_effect * 1e6), (len(group_indices), 1)))
+                    elif attack_name == 'Scaling_Exploit': target_vec = np.round(mu_ctrl_pred + (grp_mean_effect * 1e6))
                     else: target_vec = grp_mean_pred 
                     
-                    target_vec = np.mean(mat_p, axis=0) # Converting 2D attack result matrix to a 1D centroid
                     r_metrics = calculate_retrieval_metrics(target_vec - shift_p, pert_gene, universe, weights)
                     for m_name, m_val in r_metrics.items():
                         local_results.append({
@@ -400,8 +397,6 @@ def evaluate_single_perturbation(pert_gene, pert_to_indices, deg_cont, deg_bin, 
                 curr_p_mat = mat_p[:, mask] if mask is not None else mat_p
                 curr_t_mat = mat_t[:, mask] if mask is not None else mat_t
                 
-                # If it's a binary metric, the weight of every remaining column is exactly 1
-                # If it's continuous, use the actual weight values
                 curr_w = np.ones(np.sum(mask)) if is_bin else weights
 
                 if curr_p_mat.shape[1] < 1: continue
@@ -414,7 +409,6 @@ def evaluate_single_perturbation(pert_gene, pert_to_indices, deg_cont, deg_bin, 
                 cos_arr = weighted_cosine(curr_t_mat, curr_p_mat, curr_w)
 
                 for local_idx, global_idx in enumerate(group_indices):
-                    # FIX 3: Added Feature_Space to Spatial (None)
                     local_results.extend([
                         {'Sample_ID': global_idx, 'Perturbation': clean_pert_name, 'Attack_Type': attack_name, 'Weighting_Strategy': w_name, 'Reference_Strategy': ref_name, 'Aggregation_Strategy': 'None', 'Feature_Space': 'Raw_Genes', 'Metric': 'MSE', 'Value': mse_arr[local_idx]},
                         {'Sample_ID': global_idx, 'Perturbation': clean_pert_name, 'Attack_Type': attack_name, 'Weighting_Strategy': w_name, 'Reference_Strategy': ref_name, 'Aggregation_Strategy': 'None', 'Feature_Space': 'Raw_Genes', 'Metric': 'RMSE', 'Value': rmse_arr[local_idx]},
@@ -427,7 +421,6 @@ def evaluate_single_perturbation(pert_gene, pert_to_indices, deg_cont, deg_bin, 
                 pb_t_mat = np.mean(curr_t_mat, axis=0, keepdims=True)
                 pb_p_mat = np.mean(curr_p_mat, axis=0, keepdims=True)
                 
-                # Added Feature_Space to Spatial (Pseudobulk)
                 local_results.extend([
                     {'Sample_ID': clean_pert_name, 'Perturbation': clean_pert_name, 'Attack_Type': attack_name, 'Weighting_Strategy': w_name, 'Reference_Strategy': ref_name, 'Aggregation_Strategy': 'Pseudobulk', 'Feature_Space': 'Raw_Genes', 'Metric': 'MSE', 'Value': weighted_mse(pb_t_mat, pb_p_mat, curr_w)[0]},
                     {'Sample_ID': clean_pert_name, 'Perturbation': clean_pert_name, 'Attack_Type': attack_name, 'Weighting_Strategy': w_name, 'Reference_Strategy': ref_name, 'Aggregation_Strategy': 'Pseudobulk', 'Feature_Space': 'Raw_Genes', 'Metric': 'RMSE', 'Value': weighted_rmse(pb_t_mat, pb_p_mat, curr_w)[0]},
@@ -439,9 +432,6 @@ def evaluate_single_perturbation(pert_gene, pert_to_indices, deg_cont, deg_bin, 
 
                 if not is_top20:
                     allow_kl = (ref_name == 'Specific_Perturbation') and is_bin
-                    
-                    # We pass the raw (unmasked) matrices to Pertpy, 
-                    # but we pass the cont_weights so Pertpy can handle the masking internally
                     cont_weights = None if is_bin else weights
                     pertpy_results_raw = calculate_pertpy_metrics(mat_t, mat_p, mask=mask, weights=cont_weights, allow_kl=allow_kl)
                     
@@ -486,8 +476,7 @@ def compute_performance(y_pred_path, y_ctrl_pred_path, y_gt_path, y_ctrl_gt_path
             X_ctrl_gt = X_ctrl_gt_raw.tocsr().T.tocsr()
             P_gt = P_gt_sparse.tocsr().T.tocsr()
         elif dim0_match and dim1_match:
-            # C_pert == C_ctrl (Synthetic Data Edge Case)
-            if X_pred_raw.shape[0] > X_pred_raw.shape[1]: # Assumes that the total number of cells in the synthetic dataset is higher than the number of genes
+            if X_pred_raw.shape[0] > X_pred_raw.shape[1]:
                 X_pred, X_ctrl_pred, X_gt, X_ctrl_gt, P_gt = X_pred_raw, X_ctrl_pred_raw, X_gt_raw, X_ctrl_gt_raw, P_gt_sparse
             else:
                 X_pred = X_pred_raw.tocsr().T.tocsr()
@@ -555,7 +544,6 @@ def compute_performance(y_pred_path, y_ctrl_pred_path, y_gt_path, y_ctrl_gt_path
         end_idx = min(start_idx + chunk_size, len(unique_perts))
         unique_perts = unique_perts[start_idx:end_idx]
         
-        # Appended chunk identifier to the save path
         base, ext = os.path.splitext(save_path)
         save_path = f"{base}_chunk_{chunk_idx}{ext}"
 
@@ -582,11 +570,15 @@ def compute_performance(y_pred_path, y_ctrl_pred_path, y_gt_path, y_ctrl_gt_path
         print(f"Done. Saved to {save_path}\n")
 
 if __name__ == "__main__":
+    REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    DEFAULT_BASE = os.path.join(REPO_ROOT, "datasets", "real")
+    DEFAULT_RESULTS = os.path.join(REPO_ROOT, "results", "real")
+
     parser = argparse.ArgumentParser(description="Calculate evaluation metrics for a dataset variant.")
     parser.add_argument("--dataset", type=str, required=True, help="Folder name of the dataset")
     parser.add_argument("--variant", type=str, required=True, help="Folder name of the variant (e.g., 'GT_Reference' or 'Structure_Level_3_SNR_0.01')")
-    parser.add_argument("--base_path", type=str, default=("../../datasets/real"), help="Root directory containing dataset folders")
-    parser.add_argument("--results_path", type=str, default=("../../results/real"), help="Root directory to save results")
+    parser.add_argument("--base_path", type=str, default=DEFAULT_BASE, help="Root directory containing dataset folders")
+    parser.add_argument("--results_path", type=str, default=DEFAULT_RESULTS, help="Root directory to save results")
     parser.add_argument("--chunk_idx", type=int, default=0, help="The index of the chunk to process")
     parser.add_argument("--num_chunks", type=int, default=1, help="Total number of chunks to split the job into")
     args = parser.parse_args()
