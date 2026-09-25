@@ -19,7 +19,7 @@ import pandas as pd
 
 # Support both module execution from root and direct script execution
 try:
-    from src.rebuttals.mset_stability import LITERATURE_METRICS, build_pool, optimal_mset
+    from .mset_stability import LITERATURE_METRICS, build_pool, optimal_mset
 except ImportError:
     from mset_stability import LITERATURE_METRICS, build_pool, optimal_mset
 
