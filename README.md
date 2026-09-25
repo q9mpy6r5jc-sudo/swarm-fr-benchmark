@@ -1,6 +1,6 @@
 # SWARM-FR: Benchmarking Virtual Cell Metrics
 
-This repository contains the codebase and scripts to reproduce the experiments, evaluations, and datasets presented in the "SWARM-FR: Benchmarking Virtual Cell Metrics" paper for the NeurIPS 2026 Evaluations & Datasets Track.
+This repository contains the codebase and scripts to reproduce the experiments, evaluations, and datasets presented in the "SWARM-FR: Benchmarking Virtual Cell Metrics" paper for ICLR 2027.
 
 ## Repository Structure
 
