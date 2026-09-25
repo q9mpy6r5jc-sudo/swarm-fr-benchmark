@@ -70,11 +70,11 @@ def calculate_portfolio_score_per_dataset(dataframes):
         d_rows = [df[df['Dataset'] == d].iloc[0] for df in dataframes if not df[df['Dataset'] == d].empty]
         if not d_rows: continue
         
-        # Fidelity optimization
+        # Harmonic Fidelity optimization matching paper
         if struct_cols and mag_cols:
             best_struct = max([np.mean([row.get(c, 0) for c in struct_cols]) for row in d_rows])
             best_mag = max([np.mean([row.get(c, 0) for c in mag_cols]) for row in d_rows])
-            port_f = (best_struct + best_mag) / 2.0
+            port_f = (2 * best_struct * best_mag) / (best_struct + best_mag + 1e-9)
         else:
             port_f = np.max([row['Fidelity_Score'] for row in d_rows])
             
@@ -153,8 +153,8 @@ def generate_figure3(r_real, f_real, r_synth, f_synth, tables_dir, save_dir):
     
     ax2 = ax1.twinx()
     x_pos = np.arange(len(plot_df))
-    ax2.bar(x_pos, plot_df['Mean_DEGs'], color='lightgray', alpha=0.5, label='Mean DEGs (n)')
-    ax2.set_ylabel('Mean DEGs (n)', fontweight='normal', color='gray', fontsize=16)
+    ax2.bar(x_pos, plot_df['Mean_DEGs'], color='lightgray', alpha=0.5, label='Mean DEGs')
+    ax2.set_ylabel('Mean DEGs', fontweight='normal', color='gray', fontsize=16)
     ax2.tick_params(axis='y', labelcolor='gray', labelsize=14)
 
     def prep_name(n):
@@ -164,13 +164,13 @@ def generate_figure3(r_real, f_real, r_synth, f_synth, tables_dir, save_dir):
             return ' '.join(words[:2]) + '\n' + ' '.join(words[2:])
         return clean_name
     
-    label_swarm_peak = f'Top SWARM Set (k={int(swarm_size)})\nMin R: {swarm_r:.2f}, Max F: {swarm_f:.2f}'
-    label_swarm_match = f'Top SWARM Set (k={int(lit_size)})\nMin R: {swarm_match_r:.2f}, Max F: {swarm_match_f:.2f}'
-    label_lit_peak = f'Top Literature Set (k={int(lit_size)})\nMin R: {lit_r:.2f}, Max F: {lit_f:.2f}'
+    label_swarm_peak = f'Top SWARM M-Set (t={int(swarm_size)})\nMax F: {swarm_f:.2f}, Min R: {swarm_r:.2f}'
+    label_swarm_match = f'Top SWARM M-Set (t={int(lit_size)})\nMax F: {swarm_match_f:.2f}, Min R: {swarm_match_r:.2f}'
+    label_lit_peak = f'Top Literature M-Set (t={int(lit_size)})\nMax F: {lit_f:.2f}, Min R: {lit_r:.2f}'
     
-    label_single = f'Leaderboard #1 ({prep_name(s_name)})\nR: {s_r:.2f}, F: {s_f:.2f}'
-    label_max_f = f'Max Fidelity ({prep_name(f_name)})\nR: {f_r:.2f}, F: {f_f:.2f}'
-    label_max_r = f'Max Robustness ({prep_name(r_name)})\nR: {r_r:.2f}, F: {r_f:.2f}'
+    label_single = f'Leaderboard #1 ({prep_name(s_name)})\nF: {s_f:.2f}, R: {s_r:.2f}'
+    label_max_f = f'Max Fidelity ({prep_name(f_name)})\nF: {f_f:.2f}, R: {f_r:.2f}'
+    label_max_r = f'Max Robustness ({prep_name(r_name)})\nF: {r_f:.2f}, R: {r_r:.2f}'
 
     ax1.plot(x_pos, plot_df['SWARM_Peak'], marker='o', markersize=9, linestyle='none', color='#ff7f0e', zorder=10, label=label_swarm_peak) 
     ax1.plot(x_pos, plot_df['SWARM_Matched'], marker='^', markersize=8, linestyle='none', color='#1f77b4', zorder=9, label=label_swarm_match)
@@ -184,7 +184,7 @@ def generate_figure3(r_real, f_real, r_synth, f_synth, tables_dir, save_dir):
     ax1.set_xticks(x_pos)
     ax1.set_xticklabels([f"{row['Dataset']}" for _, row in plot_df.iterrows()], rotation=45, ha='right', fontsize=11)
     ax1.tick_params(axis='y', labelsize=14)
-    ax1.set_xlabel('Datasets ranked by mean DEGs (n)', fontweight='normal', fontsize=16)
+    ax1.set_xlabel('Datasets ranked by mean DEGs', fontweight='normal', fontsize=16)
     
     l1, lab1 = ax1.get_legend_handles_labels()
     l2, lab2 = ax2.get_legend_handles_labels()
@@ -200,10 +200,10 @@ def generate_figure3(r_real, f_real, r_synth, f_synth, tables_dir, save_dir):
     print(f"Saved Figure 2b to: {save_pdf}")
 
 if __name__ == "__main__":
-    r_real = ("../../analysis/robustness_real")
-    f_real = ("../../analysis/fidelity_real")
-    r_synth = ("../../analysis/robustness_synthetic")
-    f_synth = ("../../analysis/fidelity_synthetic")
-    tables_directory = ("../../analysis/tables")
-    output_directory = ("../../analysis/plots")
+    r_real = os.path.expandvars("$SCRATCH/virtual-cell/virtual-cell-metrics/analysis/robustness_real")
+    f_real = os.path.expandvars("$SCRATCH/virtual-cell/virtual-cell-metrics/analysis/fidelity_real")
+    r_synth = os.path.expandvars("$SCRATCH/virtual-cell/virtual-cell-metrics/analysis/robustness_synthetic")
+    f_synth = os.path.expandvars("$SCRATCH/virtual-cell/virtual-cell-metrics/analysis/fidelity_synthetic")
+    tables_directory = os.path.expandvars("$SCRATCH/virtual-cell/virtual-cell-metrics/analysis/tables")
+    output_directory = os.path.expandvars("$SCRATCH/virtual-cell/virtual-cell-metrics/analysis/plots")
     generate_figure3(r_real, f_real, r_synth, f_synth, tables_directory, output_directory)
