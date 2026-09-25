@@ -40,7 +40,7 @@ analysis/
 
 ---
 
-## Reproducing Manuscript Analyses (No SLURM Required)
+## Reproducing Manuscript Analyses
 
 These analysis commands operate on saved metric outputs and can be executed locally in minutes. Run all commands from the repository root:
 
