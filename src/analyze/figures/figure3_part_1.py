@@ -122,13 +122,13 @@ def load_data(r_real_base, f_real_base, r_synth_base, f_synth_base):
     global_datasets = sorted(list(set().union(*(r['F_Struct_Scores'].keys() for r in all_records))))
 
     def finalize_scores(r):
-        struct_vals = [r['F_Struct_Scores'].get(ds, 0.0) for ds in global_datasets]
-        mag_vals = [r['F_Mag_Scores'].get(ds, 0.0) for ds in global_datasets]
-        
-        mean_struct = np.mean(struct_vals) if struct_vals else 0.0
-        mean_mag = np.mean(mag_vals) if mag_vals else 0.0
-        
-        r['Mean_F'] = (mean_struct + mean_mag) / 2.0
+        struct_vals = np.array([r['F_Struct_Scores'].get(ds, 0.0) for ds in global_datasets])
+        mag_vals = np.array([r['F_Mag_Scores'].get(ds, 0.0) for ds in global_datasets])
+
+        # Combine degradation types within each dataset, then average datasets.
+        # This matches the standalone Fidelity_Score used by compute_fidelity.py.
+        dataset_f = (2 * struct_vals * mag_vals) / (struct_vals + mag_vals + 1e-9)
+        r['Mean_F'] = np.mean(dataset_f) if dataset_f.size else 0.0
 
         attack_means = []
         for ac, ac_dict in r['R_Scores'].items():
@@ -187,7 +187,7 @@ def evaluate_vectorized_ensembles(df, sizes=[1, 2, 3, 4, 5], top_n=10):
         indices = np.array(list(itertools.combinations(range(len(df)), k)))
         
         if k == 1:
-            F_combined = (F_struct_matrix + F_mag_matrix) / 2.0
+            F_combined = (2 * F_struct_matrix * F_mag_matrix) / (F_struct_matrix + F_mag_matrix + 1e-9)
             F_port = np.mean(F_combined, axis=1)
             R_port = np.min(np.mean(R_tensor, axis=1), axis=1)
         else:
@@ -195,7 +195,7 @@ def evaluate_vectorized_ensembles(df, sizes=[1, 2, 3, 4, 5], top_n=10):
             F_struct_port = np.max(F_struct_matrix[indices], axis=1)
             F_mag_port = np.max(F_mag_matrix[indices], axis=1)
             
-            F_combined = (F_struct_port + F_mag_port) / 2.0
+            F_combined = (2 * F_struct_port * F_mag_port) / (F_struct_port + F_mag_port + 1e-9)
             F_port = np.mean(F_combined, axis=1)
             
             R_port = np.min(np.mean(np.max(R_tensor[indices], axis=1), axis=1), axis=1)
@@ -381,13 +381,13 @@ def generate_latex_tables(df_all, save_dir):
         f.write("\\bottomrule\n\\end{tabularx}\n\\end{table*}\n")
 
 if __name__ == "__main__":
-    r_real = ("../../analysis/robustness_real")
-    f_real = ("../../analysis/fidelity_real")
-    r_synth = ("../../analysis/robustness_synthetic")
-    f_synth = ("../../analysis/fidelity_synthetic")
+    r_real = os.path.expandvars("$SCRATCH/virtual-cell/virtual-cell-metrics/analysis/robustness_real")
+    f_real = os.path.expandvars("$SCRATCH/virtual-cell/virtual-cell-metrics/analysis/fidelity_real")
+    r_synth = os.path.expandvars("$SCRATCH/virtual-cell/virtual-cell-metrics/analysis/robustness_synthetic")
+    f_synth = os.path.expandvars("$SCRATCH/virtual-cell/virtual-cell-metrics/analysis/fidelity_synthetic")
     
-    plots_directory = ("../../analysis/plots")
-    tables_directory = ("../../analysis/tables")
+    plots_directory = os.path.expandvars("$SCRATCH/virtual-cell/virtual-cell-metrics/analysis/plots")
+    tables_directory = os.path.expandvars("$SCRATCH/virtual-cell/virtual-cell-metrics/analysis/tables")
     os.makedirs(plots_directory, exist_ok=True); os.makedirs(tables_directory, exist_ok=True)
     
     df_swarm_base, df_lit_base = load_data(r_real, f_real, r_synth, f_synth)
